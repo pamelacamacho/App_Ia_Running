@@ -9,13 +9,14 @@ const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
 
-interface AnalyzeWorkoutBody {
+interface AnalyzeExpenseBody {
   fecha?: string;
-  tipo?: string;
-  distancia_km?: number;
-  duracion_min?: number;
-  ritmo?: string;
+  categoria?: string;
+  monto?: number;
+  metodo_pago?: string;
   notas?: string;
+  monthlySpent?: number;
+  monthlyBudget?: number;
 }
 
 const ai = new GoogleGenAI({
@@ -31,20 +32,21 @@ async function startServer(): Promise<void> {
   const app = express();
   app.use(express.json());
 
-  app.post('/api/analyze-workout', async (req, res) => {
-    const body = (req.body || {}) as AnalyzeWorkoutBody;
-    const { fecha, tipo, distancia_km, duracion_min, ritmo, notas } = body;
+  app.post('/api/analyze-expense', async (req, res) => {
+    const body = (req.body || {}) as AnalyzeExpenseBody;
+    const {
+      fecha,
+      categoria,
+      monto,
+      metodo_pago,
+      notas,
+      monthlySpent = 0,
+      monthlyBudget = 0,
+    } = body;
 
-    if (
-      typeof distancia_km !== 'number' ||
-      !Number.isFinite(distancia_km) ||
-      distancia_km <= 0 ||
-      typeof duracion_min !== 'number' ||
-      !Number.isFinite(duracion_min) ||
-      duracion_min <= 0
-    ) {
+    if (typeof monto !== 'number' || !Number.isFinite(monto) || monto <= 0) {
       res.status(400).json({
-        error: 'Ingresa una distancia y duración válidas mayores a 0 para analizar la sesión.',
+        error: 'Ingresa un monto válido mayor a 0 para analizar el gasto.',
       });
       return;
     }
@@ -57,23 +59,27 @@ async function startServer(): Promise<void> {
       return;
     }
 
+    const budgetRatio =
+      monthlyBudget > 0 ? `${((monto / monthlyBudget) * 100).toFixed(1)}%` : 'Sin presupuesto configurado';
+    const accumulatedAfter = monthlySpent + monto;
+
     const prompt = [
       `Fecha: ${fecha || 'Hoy'}`,
-      `Tipo: ${tipo || 'Correr'}`,
-      `Distancia: ${distancia_km.toFixed(2)} km`,
-      `Duración: ${duracion_min} min`,
-      `Ritmo promedio: ${ritmo || 'No calculado'} min/km`,
-      `Notas del atleta: ${notas && notas.trim() ? notas.trim() : 'Sin notas adicionales'}`,
+      `Categoría: ${categoria || 'Comida'}`,
+      `Monto del gasto: $${monto.toFixed(2)}`,
+      `Método de pago: ${metodo_pago || 'Tarjeta'}`,
+      `Notas: ${notas && notas.trim() ? notas.trim() : 'Sin notas adicionales'}`,
+      `Contexto mensual: Gastado previo $${monthlySpent.toFixed(2)}, nuevo acumulado $${accumulatedAfter.toFixed(2)}, presupuesto mensual $${monthlyBudget.toFixed(2)} (este gasto representa ${budgetRatio} del presupuesto).`,
     ].join('\n');
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-4-hydrogen',
-        contents: `Analiza esta sesión de entrenamiento:\n${prompt}`,
+        contents: `Analiza este gasto personal:\n${prompt}`,
         config: {
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
           systemInstruction:
-            'Eres un entrenador de running y resistencia deportiva directo y práctico. Analiza la sesión registrada (tipo, distancia, duración, ritmo en min/km y notas) y responde en español en 2 o 3 frases breves como máximo: primero una lectura clara del esfuerzo o ritmo alcanzado, y luego una recomendación práctica de recuperación o progresión para la siguiente sesión. Sin saludos, sin viñetas ni emojis.',
+            'Eres un asesor de finanzas personales práctico y directo. Analiza el gasto registrado junto al presupuesto mensual acumulado y responde en español en máximo 2 o 3 frases breves: primero evalúa el impacto real de este gasto en el mes, y luego da una recomendación concreta y accionable para equilibrar los próximos días. Sin saludos, sin viñetas ni emojis.',
         },
       });
 
@@ -89,9 +95,10 @@ async function startServer(): Promise<void> {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Error desconocido al consultar Gemini.';
-      console.error('Error en /api/analyze-workout:', message);
+      console.error('Error en /api/analyze-expense:', message);
       res.status(500).json({
-        error: 'No se pudo completar el análisis con Gemini. Verifica tu conexión o clave de API e intenta de nuevo.',
+        error:
+          'No se pudo completar el análisis con Gemini. Verifica tu conexión o clave de API e intenta de nuevo.',
       });
     }
   });
@@ -112,7 +119,7 @@ async function startServer(): Promise<void> {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`RunTracker Sheets server listening on http://0.0.0.0:${PORT}`);
+    console.log(`GastoFlash Sheets server listening on http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -1,99 +1,116 @@
 import { useMemo, useState } from 'react';
 import {
+  Bus,
   Database,
-  Footprints,
-  Mountain,
-  PersonStanding,
+  Home,
+  Sparkles,
   Trash2,
+  Utensils,
   WifiOff,
 } from 'lucide-react';
-import type { WorkoutFilter, WorkoutRecord, WorkoutType } from '../types/workout';
+import type { ExpenseCategory, ExpenseFilter, ExpenseRecord } from '../types/expense';
+import { formatCurrency } from '../utils/expense';
 
-interface WorkoutHistoryProps {
-  workouts: WorkoutRecord[];
+interface ExpenseHistoryProps {
+  expenses: ExpenseRecord[];
   demoMode: boolean;
   onToggleDemoMode: (enabled: boolean) => void;
   onLoadDemoData: () => void;
-  onDeleteWorkout: (id: string) => void;
+  onDeleteExpense: (id: string) => void;
   onClearAll: () => void;
 }
 
-const FILTER_OPTIONS: WorkoutFilter[] = ['Todos', 'Correr', 'Caminata', 'Trail'];
+const FILTER_OPTIONS: ExpenseFilter[] = [
+  'Todas',
+  'Comida',
+  'Transporte',
+  'Hogar',
+  'Ocio',
+];
 
-function ActivityIcon({ tipo }: { tipo: WorkoutType }) {
-  if (tipo === 'Trail') {
-    return <Mountain className="w-4 h-4 text-[#0B0D12]" aria-hidden="true" />;
+function CategoryIcon({ categoria }: { categoria: ExpenseCategory }) {
+  if (categoria === 'Transporte') {
+    return <Bus className="w-4 h-4 text-[#0D1117]" aria-hidden="true" />;
   }
-  if (tipo === 'Caminata') {
-    return <Footprints className="w-4 h-4 text-[#0B0D12]" aria-hidden="true" />;
+  if (categoria === 'Hogar') {
+    return <Home className="w-4 h-4 text-[#0D1117]" aria-hidden="true" />;
   }
-  return <PersonStanding className="w-4 h-4 text-[#0B0D12]" aria-hidden="true" />;
+  if (categoria === 'Ocio') {
+    return <Sparkles className="w-4 h-4 text-[#0D1117]" aria-hidden="true" />;
+  }
+  return <Utensils className="w-4 h-4 text-[#0D1117]" aria-hidden="true" />;
 }
 
-export function WorkoutHistory({
-  workouts,
+export function ExpenseHistory({
+  expenses,
   demoMode,
   onToggleDemoMode,
   onLoadDemoData,
-  onDeleteWorkout,
+  onDeleteExpense,
   onClearAll,
-}: WorkoutHistoryProps) {
-  const [filter, setFilter] = useState<WorkoutFilter>('Todos');
+}: ExpenseHistoryProps) {
+  const [filter, setFilter] = useState<ExpenseFilter>('Todas');
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const filteredWorkouts = useMemo(() => {
+  const filteredExpenses = useMemo(() => {
     const base =
-      filter === 'Todos'
-        ? workouts
-        : workouts.filter((item) => item.tipo === filter);
+      filter === 'Todas'
+        ? expenses
+        : expenses.filter((item) => item.categoria === filter);
 
     return [...base].sort((a, b) => {
       if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha);
       return b.createdAt.localeCompare(a.createdAt);
     });
-  }, [workouts, filter]);
+  }, [expenses, filter]);
+
+  const filteredSubtotal = useMemo(
+    () =>
+      filteredExpenses.reduce(
+        (sum, item) => sum + (Number.isFinite(item.monto) ? item.monto : 0),
+        0,
+      ),
+    [filteredExpenses],
+  );
 
   return (
     <section
-      aria-label="Historial de entrenamientos"
+      aria-label="Historial de gastos"
       className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4"
     >
-      {/* Cabecera e interruptor de modo demo / sin conexión */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl font-bold tracking-tight text-[#0B0D12]">
-            Historial de sesiones
+          <h2 className="font-display text-2xl font-bold tracking-tight text-[#0D1117]">
+            Historial de gastos
           </h2>
           <p className="text-xs text-slate-500 mt-0.5 tabular-nums">
-            {filteredWorkouts.length}{' '}
-            {filteredWorkouts.length === 1 ? 'registro visible' : 'registros visibles'}
-            {' · '}Guardado en este dispositivo
+            {filteredExpenses.length}{' '}
+            {filteredExpenses.length === 1 ? 'movimiento' : 'movimientos'}
+            {' · '}Total filtrado: {formatCurrency(filteredSubtotal)}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={demoMode}
-            onClick={() => onToggleDemoMode(!demoMode)}
-            className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
-              demoMode
-                ? 'bg-[#0B0D12] text-[#D9FF00] border-[#0B0D12]'
-                : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <WifiOff className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Modo demo / local: {demoMode ? 'Activo' : 'Inactivo'}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={demoMode}
+          onClick={() => onToggleDemoMode(!demoMode)}
+          className={`min-h-[40px] px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 ${
+            demoMode
+              ? 'bg-[#0D1117] text-[#34D399] border-[#0D1117]'
+              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+          }`}
+        >
+          <WifiOff className="w-3.5 h-3.5" aria-hidden="true" />
+          <span>Modo demo / local: {demoMode ? 'Activo' : 'Inactivo'}</span>
+        </button>
       </div>
 
-      {/* Filtros por tipo */}
+      {/* Filtros por categoría */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
           role="tablist"
-          aria-label="Filtrar por tipo de entrenamiento"
+          aria-label="Filtrar gastos por categoría"
           className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto max-w-full"
         >
           {FILTER_OPTIONS.map((option) => {
@@ -105,10 +122,10 @@ export function WorkoutHistory({
                 role="tab"
                 aria-selected={active}
                 onClick={() => setFilter(option)}
-                className={`min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
+                className={`min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
                   active
-                    ? 'bg-white text-[#0B0D12] shadow-xs'
-                    : 'text-slate-600 hover:text-[#0B0D12]'
+                    ? 'bg-white text-[#0D1117] shadow-xs'
+                    : 'text-slate-600 hover:text-[#0D1117]'
                 }`}
               >
                 {option}
@@ -121,13 +138,13 @@ export function WorkoutHistory({
           <button
             type="button"
             onClick={onLoadDemoData}
-            className="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-[#0B0D12] hover:bg-slate-100 flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
+            className="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-[#0D1117] hover:bg-slate-100 flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0"
           >
             <Database className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Cargar demo</span>
           </button>
 
-          {workouts.length > 0 && !confirmClear && (
+          {expenses.length > 0 && !confirmClear && (
             <button
               type="button"
               onClick={() => setConfirmClear(true)}
@@ -161,47 +178,49 @@ export function WorkoutHistory({
         </div>
       </div>
 
-      {/* Lista de sesiones */}
-      {filteredWorkouts.length === 0 ? (
+      {/* Lista */}
+      {filteredExpenses.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-200 bg-[#F9FAFB] px-4 py-10 text-center space-y-3">
           <p className="text-sm font-semibold text-slate-800">
-            {workouts.length === 0
-              ? 'Aún no hay entrenamientos guardados'
-              : `No hay sesiones registradas de tipo "${filter}"`}
+            {expenses.length === 0
+              ? 'Aún no hay gastos registrados'
+              : `No hay gastos en la categoría "${filter}"`}
           </p>
           <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-            {workouts.length === 0
-              ? 'Registra tu primera sesión en el formulario o carga datos de ejemplo para probar el resumen mensual y los filtros.'
-              : 'Prueba seleccionar otro filtro o registra un nuevo entrenamiento de esta disciplina.'}
+            {expenses.length === 0
+              ? 'Registra tu primer movimiento en el formulario o carga gastos de ejemplo para probar el presupuesto mensual y los filtros.'
+              : 'Prueba seleccionar otra categoría o registra un nuevo movimiento.'}
           </p>
-          {workouts.length === 0 && (
+          {expenses.length === 0 && (
             <button
               type="button"
               onClick={onLoadDemoData}
-              className="min-h-[42px] px-4 py-2 rounded-xl bg-[#0B0D12] text-white text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5"
+              className="min-h-[42px] px-4 py-2 rounded-xl bg-[#0D1117] text-white text-xs font-semibold hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5"
             >
-              <Database className="w-3.5 h-3.5 text-[#D9FF00]" aria-hidden="true" />
-              <span>Cargar sesiones de ejemplo</span>
+              <Database className="w-3.5 h-3.5 text-[#34D399]" aria-hidden="true" />
+              <span>Cargar gastos de ejemplo</span>
             </button>
           )}
         </div>
       ) : (
         <ul className="divide-y divide-slate-100">
-          {filteredWorkouts.map((item) => (
+          {filteredExpenses.map((item) => (
             <li key={item.id} className="py-4 first:pt-1 last:pb-1">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-[#F4F6F8] border border-slate-200/80 flex items-center justify-center shrink-0 mt-0.5">
-                    <ActivityIcon tipo={item.tipo} />
+                    <CategoryIcon categoria={item.categoria} />
                   </div>
 
                   <div className="min-w-0 space-y-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500">
-                      <span className="font-semibold text-[#0B0D12] text-sm">
-                        {item.tipo}
+                      <span className="font-semibold text-[#0D1117] text-sm">
+                        {item.categoria}
                       </span>
                       <span aria-hidden="true">·</span>
                       <span className="font-mono tabular-nums">{item.fecha}</span>
+                      <span aria-hidden="true">·</span>
+                      <span>{item.metodo_pago}</span>
                       <span aria-hidden="true">·</span>
                       <span
                         className={
@@ -214,20 +233,9 @@ export function WorkoutHistory({
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                      <span className="font-display text-2xl font-bold text-[#0B0D12] tabular-nums">
-                        {item.distancia_km.toFixed(2)}{' '}
-                        <span className="text-xs font-sans font-semibold text-slate-500">
-                          km
-                        </span>
-                      </span>
-                      <span className="font-mono text-sm font-semibold text-slate-700 tabular-nums">
-                        {item.duracion_min} min
-                      </span>
-                      <span className="font-mono text-sm font-semibold text-[#0B0D12] tabular-nums">
-                        {item.ritmo} min/km
-                      </span>
-                    </div>
+                    <p className="font-display text-2xl font-bold text-[#0D1117] tabular-nums">
+                      {formatCurrency(item.monto)}
+                    </p>
 
                     {item.notas && (
                       <p className="text-xs sm:text-sm text-slate-600 leading-relaxed pt-0.5">
@@ -237,8 +245,8 @@ export function WorkoutHistory({
 
                     {item.aiAnalysis && (
                       <p className="text-xs text-slate-700 bg-[#F4F6F8] rounded-lg px-3 py-2 mt-1.5 leading-relaxed">
-                        <span className="font-semibold text-[#0B0D12]">
-                          Comentario IA:{' '}
+                        <span className="font-semibold text-[#0D1117]">
+                          Diagnóstico IA:{' '}
                         </span>
                         {item.aiAnalysis}
                       </p>
@@ -248,8 +256,8 @@ export function WorkoutHistory({
 
                 <button
                   type="button"
-                  onClick={() => onDeleteWorkout(item.id)}
-                  aria-label={`Eliminar entrenamiento del ${item.fecha}`}
+                  onClick={() => onDeleteExpense(item.id)}
+                  aria-label={`Eliminar gasto de ${item.categoria} del ${item.fecha}`}
                   className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
                 >
                   <Trash2 className="w-4 h-4" aria-hidden="true" />

@@ -1,24 +1,25 @@
 import { useEffect, useState } from 'react';
 import { ListChecks, PlusCircle, Settings2 } from 'lucide-react';
 import { AppsScriptConfig } from './components/AppsScriptConfig';
+import { ExpenseForm } from './components/ExpenseForm';
+import { ExpenseHistory } from './components/ExpenseHistory';
 import { Summary } from './components/Summary';
-import { WorkoutForm } from './components/WorkoutForm';
-import { WorkoutHistory } from './components/WorkoutHistory';
-import type { WorkoutRecord } from './types/workout';
+import type { ExpenseRecord } from './types/expense';
 import {
-  createDemoWorkouts,
+  createDemoExpenses,
   DEFAULT_APPS_SCRIPT_URL,
+  DEFAULT_MONTHLY_BUDGET,
   STORAGE_KEYS,
-} from './utils/workout';
+} from './utils/expense';
 
 type ActiveTab = 'registrar' | 'historial' | 'conexion';
 
-function loadInitialWorkouts(): WorkoutRecord[] {
+function loadInitialExpenses(): ExpenseRecord[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.WORKOUTS);
+    const raw = localStorage.getItem(STORAGE_KEYS.EXPENSES);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as WorkoutRecord[]) : [];
+    return Array.isArray(parsed) ? (parsed as ExpenseRecord[]) : [];
   } catch {
     return [];
   }
@@ -33,6 +34,17 @@ function loadInitialScriptUrl(): string {
   }
 }
 
+function loadInitialBudget(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.MONTHLY_BUDGET);
+    if (!raw) return DEFAULT_MONTHLY_BUDGET;
+    const parsed = Number.parseFloat(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MONTHLY_BUDGET;
+  } catch {
+    return DEFAULT_MONTHLY_BUDGET;
+  }
+}
+
 function loadInitialDemoMode(): boolean {
   try {
     return localStorage.getItem(STORAGE_KEYS.DEMO_MODE) === 'true';
@@ -43,17 +55,18 @@ function loadInitialDemoMode(): boolean {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('registrar');
-  const [workouts, setWorkouts] = useState<WorkoutRecord[]>(loadInitialWorkouts);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>(loadInitialExpenses);
   const [scriptUrl, setScriptUrl] = useState<string>(loadInitialScriptUrl);
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(loadInitialBudget);
   const [demoMode, setDemoMode] = useState<boolean>(loadInitialDemoMode);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEYS.WORKOUTS, JSON.stringify(workouts));
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
     } catch {
       // Ignore storage quota errors
     }
-  }, [workouts]);
+  }, [expenses]);
 
   useEffect(() => {
     try {
@@ -65,27 +78,35 @@ export default function App() {
 
   useEffect(() => {
     try {
+      localStorage.setItem(STORAGE_KEYS.MONTHLY_BUDGET, String(monthlyBudget));
+    } catch {
+      // Ignore storage errors
+    }
+  }, [monthlyBudget]);
+
+  useEffect(() => {
+    try {
       localStorage.setItem(STORAGE_KEYS.DEMO_MODE, String(demoMode));
     } catch {
       // Ignore storage errors
     }
   }, [demoMode]);
 
-  function handleSaveWorkout(record: WorkoutRecord) {
-    setWorkouts((prev) => [record, ...prev]);
+  function handleSaveExpense(record: ExpenseRecord) {
+    setExpenses((prev) => [record, ...prev]);
   }
 
-  function handleDeleteWorkout(id: string) {
-    setWorkouts((prev) => prev.filter((item) => item.id !== id));
+  function handleDeleteExpense(id: string) {
+    setExpenses((prev) => prev.filter((item) => item.id !== id));
   }
 
   function handleClearAll() {
-    setWorkouts([]);
+    setExpenses([]);
   }
 
   function handleLoadDemoData() {
-    const demos = createDemoWorkouts();
-    setWorkouts((prev) => {
+    const demos = createDemoExpenses();
+    setExpenses((prev) => {
       const existingIds = new Set(prev.map((item) => item.id));
       const newOnes = demos.filter((d) => !existingIds.has(d.id));
       return [...newOnes, ...prev];
@@ -93,7 +114,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F6F7F9] text-[#0B0D12] pb-24 lg:pb-12">
+    <div className="min-h-screen bg-[#F5F6F8] text-[#0D1117] pb-24 lg:pb-12">
       {/* Top Bar: 3-zone contract */}
       <header className="bg-white border-b border-slate-200/90">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
@@ -103,9 +124,9 @@ export default function App() {
               e.preventDefault();
               setActiveTab('registrar');
             }}
-            className="font-display text-xl sm:text-2xl font-extrabold tracking-tight text-[#0B0D12] whitespace-nowrap shrink-0"
+            className="font-display text-xl sm:text-2xl font-extrabold tracking-tight text-[#0D1117] whitespace-nowrap shrink-0"
           >
-            RunTracker Sheets
+            GastoFlash Sheets
           </a>
 
           <nav
@@ -117,8 +138,8 @@ export default function App() {
               onClick={() => setActiveTab('registrar')}
               className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
                 activeTab === 'registrar'
-                  ? 'text-[#0B0D12] underline decoration-2 underline-offset-8 decoration-[#0B0D12]'
-                  : 'hover:text-[#0B0D12]'
+                  ? 'text-[#0D1117] underline decoration-2 underline-offset-8 decoration-[#059669]'
+                  : 'hover:text-[#0D1117]'
               }`}
             >
               Registrar
@@ -128,8 +149,8 @@ export default function App() {
               onClick={() => setActiveTab('historial')}
               className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
                 activeTab === 'historial'
-                  ? 'text-[#0B0D12] underline decoration-2 underline-offset-8 decoration-[#0B0D12]'
-                  : 'hover:text-[#0B0D12]'
+                  ? 'text-[#0D1117] underline decoration-2 underline-offset-8 decoration-[#059669]'
+                  : 'hover:text-[#0D1117]'
               }`}
             >
               Historial
@@ -139,8 +160,8 @@ export default function App() {
               onClick={() => setActiveTab('conexion')}
               className={`py-1 transition-colors whitespace-nowrap shrink-0 ${
                 activeTab === 'conexion'
-                  ? 'text-[#0B0D12] underline decoration-2 underline-offset-8 decoration-[#0B0D12]'
-                  : 'hover:text-[#0B0D12]'
+                  ? 'text-[#0D1117] underline decoration-2 underline-offset-8 decoration-[#059669]'
+                  : 'hover:text-[#0D1117]'
               }`}
             >
               Conexión
@@ -153,8 +174,8 @@ export default function App() {
               onClick={() => setDemoMode((prev) => !prev)}
               className={`min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors whitespace-nowrap shrink-0 ${
                 demoMode
-                  ? 'bg-[#D9FF00] text-[#0B0D12]'
-                  : 'bg-[#0B0D12] text-white hover:bg-slate-800'
+                  ? 'bg-[#34D399] text-[#0D1117]'
+                  : 'bg-[#0D1117] text-white hover:bg-slate-800'
               }`}
             >
               {demoMode ? 'Modo local activo' : 'Sincronía Sheets'}
@@ -171,28 +192,36 @@ export default function App() {
             {activeTab === 'conexion' ? (
               <AppsScriptConfig
                 scriptUrl={scriptUrl}
+                monthlyBudget={monthlyBudget}
                 demoMode={demoMode}
                 onSaveScriptUrl={setScriptUrl}
+                onSaveBudget={setMonthlyBudget}
                 onToggleDemoMode={setDemoMode}
               />
             ) : (
-              <WorkoutForm
+              <ExpenseForm
+                expenses={expenses}
+                monthlyBudget={monthlyBudget}
                 scriptUrl={scriptUrl}
                 demoMode={demoMode}
-                onSaveWorkout={handleSaveWorkout}
+                onSaveExpense={handleSaveExpense}
                 onOpenConfig={() => setActiveTab('conexion')}
               />
             )}
           </div>
 
           <div className="lg:col-span-7 space-y-6">
-            <Summary workouts={workouts} />
-            <WorkoutHistory
-              workouts={workouts}
+            <Summary
+              expenses={expenses}
+              monthlyBudget={monthlyBudget}
+              onUpdateBudget={setMonthlyBudget}
+            />
+            <ExpenseHistory
+              expenses={expenses}
               demoMode={demoMode}
               onToggleDemoMode={setDemoMode}
               onLoadDemoData={handleLoadDemoData}
-              onDeleteWorkout={handleDeleteWorkout}
+              onDeleteExpense={handleDeleteExpense}
               onClearAll={handleClearAll}
             />
           </div>
@@ -202,25 +231,35 @@ export default function App() {
         <div className="lg:hidden space-y-5">
           {activeTab === 'registrar' && (
             <>
-              <WorkoutForm
+              <ExpenseForm
+                expenses={expenses}
+                monthlyBudget={monthlyBudget}
                 scriptUrl={scriptUrl}
                 demoMode={demoMode}
-                onSaveWorkout={handleSaveWorkout}
+                onSaveExpense={handleSaveExpense}
                 onOpenConfig={() => setActiveTab('conexion')}
               />
-              <Summary workouts={workouts} />
+              <Summary
+                expenses={expenses}
+                monthlyBudget={monthlyBudget}
+                onUpdateBudget={setMonthlyBudget}
+              />
             </>
           )}
 
           {activeTab === 'historial' && (
             <>
-              <Summary workouts={workouts} />
-              <WorkoutHistory
-                workouts={workouts}
+              <Summary
+                expenses={expenses}
+                monthlyBudget={monthlyBudget}
+                onUpdateBudget={setMonthlyBudget}
+              />
+              <ExpenseHistory
+                expenses={expenses}
                 demoMode={demoMode}
                 onToggleDemoMode={setDemoMode}
                 onLoadDemoData={handleLoadDemoData}
-                onDeleteWorkout={handleDeleteWorkout}
+                onDeleteExpense={handleDeleteExpense}
                 onClearAll={handleClearAll}
               />
             </>
@@ -229,8 +268,10 @@ export default function App() {
           {activeTab === 'conexion' && (
             <AppsScriptConfig
               scriptUrl={scriptUrl}
+              monthlyBudget={monthlyBudget}
               demoMode={demoMode}
               onSaveScriptUrl={setScriptUrl}
+              onSaveBudget={setMonthlyBudget}
               onToggleDemoMode={setDemoMode}
             />
           )}
@@ -248,13 +289,13 @@ export default function App() {
             onClick={() => setActiveTab('registrar')}
             className={`min-h-[44px] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors whitespace-nowrap ${
               activeTab === 'registrar'
-                ? 'text-[#0B0D12]'
-                : 'text-slate-500 hover:text-[#0B0D12]'
+                ? 'text-[#059669]'
+                : 'text-slate-500 hover:text-[#0D1117]'
             }`}
           >
             <PlusCircle
               className={`w-5 h-5 ${
-                activeTab === 'registrar' ? 'text-[#0B0D12]' : 'text-slate-400'
+                activeTab === 'registrar' ? 'text-[#059669]' : 'text-slate-400'
               }`}
               aria-hidden="true"
             />
@@ -266,17 +307,17 @@ export default function App() {
             onClick={() => setActiveTab('historial')}
             className={`min-h-[44px] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors whitespace-nowrap ${
               activeTab === 'historial'
-                ? 'text-[#0B0D12]'
-                : 'text-slate-500 hover:text-[#0B0D12]'
+                ? 'text-[#059669]'
+                : 'text-slate-500 hover:text-[#0D1117]'
             }`}
           >
             <ListChecks
               className={`w-5 h-5 ${
-                activeTab === 'historial' ? 'text-[#0B0D12]' : 'text-slate-400'
+                activeTab === 'historial' ? 'text-[#059669]' : 'text-slate-400'
               }`}
               aria-hidden="true"
             />
-            <span>Historial ({workouts.length})</span>
+            <span>Historial ({expenses.length})</span>
           </button>
 
           <button
@@ -284,13 +325,13 @@ export default function App() {
             onClick={() => setActiveTab('conexion')}
             className={`min-h-[44px] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors whitespace-nowrap ${
               activeTab === 'conexion'
-                ? 'text-[#0B0D12]'
-                : 'text-slate-500 hover:text-[#0B0D12]'
+                ? 'text-[#059669]'
+                : 'text-slate-500 hover:text-[#0D1117]'
             }`}
           >
             <Settings2
               className={`w-5 h-5 ${
-                activeTab === 'conexion' ? 'text-[#0B0D12]' : 'text-slate-400'
+                activeTab === 'conexion' ? 'text-[#059669]' : 'text-slate-400'
               }`}
               aria-hidden="true"
             />
